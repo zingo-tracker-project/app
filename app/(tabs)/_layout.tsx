@@ -25,16 +25,17 @@ export default function TabLayout() {
             icon: "house.fill",
         },
         {
-            name: "explore",
-            title: "Explore",
-            icon: "paperplane.fill",
-        },
-        {
             name: "todo",
             title: "Todo",
             icon: "todo",
         },
+        // {
+        //     name: "explore",
+        //     title: "Explore",
+        //     icon: "paperplane.fill",
+        // },
     ];
+    // console.log(tabList)
 
     return (
         <Tabs
@@ -43,6 +44,13 @@ export default function TabLayout() {
                 headerShown: true,
                 tabBarButton: HapticTab,
                 tabBarBackground: TabBarBackground,
+                // tabBarStyle: Platform.select({
+                //   ios: {
+                //     // Use a transparent background on iOS to show the blur effect
+                //     position: 'absolute',
+                //   },
+                //   default: {},
+                // }),
                 tabBarStyle: { display: "block" },
             }}
         >
