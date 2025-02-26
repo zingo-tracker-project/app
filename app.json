@@ -9,13 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier":"com.tracker"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package":"com.tracker"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +33,34 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ],
+            "newArchEnabled":true
+          },
+          "ios":{
+            "newArchEnabled":true
+          }
+        }
+      ],
+      [
+        "@react-native-kakao/core",
+        {
+          "nativeAppKey": "971408000a6031133be930f143cfb83f",
+          "android": {
+            "authCodeHandlerActivity": true,
+            "newArchEnabled":true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true,
+            "newArchEnabled":true
+          }
         }
       ]
     ],
