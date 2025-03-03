@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Button, Text, Image, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, Button, Text, Image } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useKakaoLogin } from '../../hooks/useKakaoLogin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
-export default function HomeScreen({ navigation }: { navigation: any }) {
+const redirectUri = AuthSession.makeRedirectUri({
+  native: process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI,
+});
 
-  const [userInfo, setUserInfo] = useState<{ nickname: string; profileImage: string; id:string } | null>(null);
+export default function HomeScreen() {
+  const [userInfo, setUserInfo] = useState<{ nickname: string; profileImage: string; id: string } | null>(null);
+  
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -21,32 +27,38 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         });
       }
     };
-
     fetchUserInfo();
   }, []);
 
-  const { webViewRef, setLoading,loading, showWebView, setShowWebView, handleNavigationStateChange, KAKAO_AUTH_URL, logout } =
-    useKakaoLogin((userData) => {
-      setUserInfo(userData);
-    });
+  const { webViewRef, setLoading, loading, showWebView, setShowWebView, handleNavigationStateChange, KAKAO_AUTH_URL, handleLogout } =
+    useKakaoLogin(
+      (userData) => {
+        setUserInfo(userData);
+      },
+      () => {
+        setUserInfo(null);
+        !isFocused
+      }
+    );
 
   return (
-    <View style={styles.container}>
+    
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
       {!showWebView ? (
         <>
           {userInfo ? (
-            <View style={styles.userContainer}>
-              <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
-              <Text style={styles.welcomeText}>{userInfo.nickname}님 안녕하세요</Text>
-              <Button title="로그아웃" onPress={logout} color="red" />
+            <View style={{ alignItems: 'center' }}>
+              <Image source={{ uri: userInfo.profileImage }} style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 10 }} />
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#000' }}>{userInfo.nickname}님, 환영합니다! 🎉</Text>
+              <Button title="로그아웃" color="red" onPress={handleLogout} />
             </View>
           ) : (
-            <Button title="카카오 로그인" onPress={() => setShowWebView(true)}  />
+            <Button title="카카오 로그인" color="#FEE500" onPress={() => setShowWebView(true)} />
           )}
         </>
       ) : (
-        <View style={styles.webViewContainer}>
-          {loading && <ActivityIndicator size="large" color="#FEE500" />}
+        <View style={{ flex: 1, width: '100%' }}>
+          {loading && <ActivityIndicator size="large" color="#FEE500" style={{ marginTop: 20 }} />}
           <WebView
             ref={webViewRef}
             source={{ uri: KAKAO_AUTH_URL }}
@@ -58,34 +70,3 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userContainer: {
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
-  },
-  welcomeText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'black', // ✅ 글자 검은색
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  webViewContainer: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

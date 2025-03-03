@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WebView, WebViewNavigation } from 'react-native-webview';
+import { WebViewNavigation } from 'react-native-webview';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+
+
 
 const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
 
-export const useKakaoLogin = (onSuccess: (userData: any) => void) => {
+export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () => void) => {
   const webViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [showWebView, setShowWebView] = useState(false);
@@ -13,7 +16,6 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void) => {
     const { url } = navState;
 
     if (url.includes('code=')) {
-      // 인가코드
       const code = new URL(url).searchParams.get('code');
 
       // 액세스 토큰 요청
@@ -52,18 +54,49 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void) => {
       onSuccess({
         nickname: userData.kakao_account.profile.nickname,
         profileImage: userData.kakao_account.profile.profile_image_url,
-        id: userData.kakao_account.profile.id,
+        id: userData.id,
       });
     } catch (error) {
       console.error('사용자 정보 요청 에러:', error);
     }
   };
 
-  // 로그아웃
-  const logout = async () => {
-    await AsyncStorage.clear();
-    alert('로그아웃 되었습니다.');
-    onSuccess(null);
+  
+  const handleLogout = async () => {
+    try {
+      const accessToken = await AsyncStorage.getItem('kakao_token');
+  
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+  
+      // 카카오 로그아웃 API 호출
+      const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+  
+      const result = await response.json();
+      console.log('카카오 로그아웃 결과:', result);
+  
+      if (response.status !== 200) {
+        throw new Error('카카오 로그아웃 실패');
+      }
+  
+      // 특정 키만 삭제 (완전한 초기화 방지)
+      await AsyncStorage.removeItem('kakao_token');
+      await AsyncStorage.removeItem('kakao_user');
+  
+      onLogout();
+      setShowWebView(false);
+  
+    } catch (error) {
+      console.log('로그아웃 에러:', error);
+      alert(error);
+    }
   };
 
   return {
@@ -74,6 +107,6 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void) => {
     setShowWebView,
     handleNavigationStateChange,
     KAKAO_AUTH_URL,
-    logout,
+    handleLogout,
   };
 };
