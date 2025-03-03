@@ -6,13 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 
-const redirectUri = AuthSession.makeRedirectUri({
-  native: process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI,
-});
-
 export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<{ nickname: string; profileImage: string; id: string } | null>(null);
   
+  // TODO navitage로 동작하도록 변경 필요
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -53,7 +50,7 @@ export default function HomeScreen() {
               <Button title="로그아웃" color="red" onPress={handleLogout} />
             </View>
           ) : (
-            <Button title="카카오 로그인" color="#FEE500" onPress={() => setShowWebView(true)} />
+            <Button title="카카오 로그인" color="yellow" onPress={() => setShowWebView(true)} />
           )}
         </>
       ) : (
