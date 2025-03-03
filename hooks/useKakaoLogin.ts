@@ -2,8 +2,7 @@ import { useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebViewNavigation } from 'react-native-webview';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-
-
+import createUser from './users/usersApi';
 
 const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
 
@@ -49,6 +48,9 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
       const userData = await userInfoResponse.json();
       console.log('사용자 정보:', userData);
 
+      await createUser(userData.id, userData.kakao_account.profile.nickname, userData.kakao_account.profile.email);
+      
+      // TODO stringify가 아닌 response의 데이터 storage에 추가
       await AsyncStorage.setItem('kakao_user', JSON.stringify(userData));
 
       onSuccess({

@@ -27,7 +27,8 @@ const makeApiRequest = async (url:string, method = 'get', params = {}, headers =
   
       return response.data;
     } catch (error) {
-      console.error('error : ', error);
+      console.log('makeApiRequest while ',method, 'to' ,url,);
+      console.log('error : ', error);
       throw error;
     }
   };
