@@ -7,6 +7,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import Ionicons  from "@expo/vector-icons/Ionicons"
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
@@ -22,18 +23,23 @@ export default function TabLayout() {
         {
             name: "index",
             title: "Home",
-            icon: "house.fill",
+            icon: "home",
         },
         {
             name: "todo",
-            title: "Todo",
-            icon: "todo",
+            title: "오늘",
+            icon: "list-outline",
         },
         // {
-        //     name: "explore",
-        //     title: "Explore",
-        //     icon: "paperplane.fill",
+        //     name: "today",
+        //     title: "Today",
+        //     icon: "list-outline",
         // },
+        {
+            name: "calendar",
+            title: "calendar",
+            icon: "list-outline",
+        },
     ];
     // console.log(tabList)
 
@@ -47,9 +53,10 @@ export default function TabLayout() {
                 // tabBarStyle: Platform.select({
                 //   ios: {
                 //     // Use a transparent background on iOS to show the blur effect
-                //     position: 'absolute',
+                //     // position: 'absolute',
                 //   },
-                //   default: {},
+                //   default: {
+                //   },
                 // }),
                 tabBarStyle: { display: "block" },
             }}
@@ -61,7 +68,8 @@ export default function TabLayout() {
                     options={{
                         title: tab.title,
                         tabBarIcon: ({ color }) => (
-                            <IconSymbol size={28} name={tab.icon} color={color} />
+                            // <IconSymbol size={28} name={tab.icon} color={color} />
+                            <Ionicons name={tab.icon} size={28} color={color} />
                         ),
                     ...(tab.badge !== undefined && { tabBarBadge: tab.badge })
                     }}
