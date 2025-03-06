@@ -30,7 +30,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        {/* 라우팅 될 페이지 */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* url 잘못 접근 시 */}
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
