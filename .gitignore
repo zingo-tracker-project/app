@@ -36,3 +36,12 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+node_modules
+.idea
+*.log*
+.nitro
+.cache
+.output
+dist
+.fleet
