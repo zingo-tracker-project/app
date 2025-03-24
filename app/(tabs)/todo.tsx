@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { View, Text, TouchableOpacity, FlatList, TextInput, Modal, StyleSheet, ScrollView } from "react-native";
-
+import makeApiRequest from '@/hooks/api'
 const Todo = () => {
     // 로그인 시 유저 이름
     const [username, setUsername] = useState("윤지훈");
@@ -53,6 +53,15 @@ const Todo = () => {
         newTodosList[index] = ""
         setNewBigTodos(newTodosList);
     }
+
+    useEffect(()=>{
+        console.log(process)
+        console.log(process.env.EXPO_PUBLIC_API_URL)
+        const API = process.env.EXPO_PUBLIC_API_URL
+        // console.log(API_URL)
+        let res = makeApiRequest(API+'/everything?q=tesla&from=2023-12-11&sortBy=publishedAt&apiKey=a59be9aa893d41d6844304d4c23162ef')
+        console.log(res)
+    }, [])
 
     return (
         <View style={styles.container}>
