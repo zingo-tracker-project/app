@@ -15,6 +15,7 @@ export const testSelector = selector({
     get : ({get}) => {
         const test = get(testAtom)
 
+        // 123
         return test ? true : false
     }
 })
