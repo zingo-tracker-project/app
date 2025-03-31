@@ -7,7 +7,7 @@ export const bigTodosAtom = atom({
 
 export const testAtom = atom({
     key : 'testAtom',
-    default: ''
+    default: false
 })
 
 export const testSelector = selector({
