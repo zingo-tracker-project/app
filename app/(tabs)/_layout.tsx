@@ -40,6 +40,11 @@ export default function TabLayout() {
             title: "calendar",
             icon: "list-outline",
         },
+        {
+            name: "recoilTest",
+            title: "recoil",
+            icon: "list-outline",
+        },
     ];
     // console.log(tabList)
 
