@@ -4,7 +4,7 @@ import { WebView } from "react-native-webview";
 import { useKakaoLogin } from "../../hooks/useKakaoLogin";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as AuthSession from "expo-auth-session";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 
 export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<{
@@ -29,7 +29,7 @@ export default function HomeScreen() {
       }
     };
     fetchUserInfo();
-  }, []);
+  }, [isFocused, userInfo]);
 
   const {
     webViewRef,
@@ -40,15 +40,39 @@ export default function HomeScreen() {
     handleNavigationStateChange,
     KAKAO_AUTH_URL,
     handleLogout,
+    handleKakaoLogout,
+    handleTokenRefresh,
+    checkAccessTokenValidity,
   } = useKakaoLogin(
-    (userData) => {
+    async (userData) => {
       setUserInfo(userData);
     },
     () => {
       setUserInfo(null);
-      !isFocused;
     }
   );
+
+  const handleCheckTokenValidity = async () => {
+    try {
+      const accessToken = await AsyncStorage.getItem("kakao_token");
+      if (accessToken) {
+        const isValid = await checkAccessTokenValidity(accessToken);
+        if (!isValid) {
+          console.log("invalid token, token refresh start...");
+          const refreshedToken = await handleTokenRefresh();
+          if (refreshedToken) {
+            console.log("token refreshed");
+          }
+        }
+      }
+    } catch (error) {
+      console.log("token err :", error);
+    }
+  };
+
+  useEffect(() => {
+    handleCheckTokenValidity();
+  }, [isFocused]);
 
   return (
     <View
@@ -75,7 +99,11 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 20, fontWeight: "bold", color: "#000" }}>
                 {userInfo.nickname}님, 환영합니다! 🎉
               </Text>
-              <Button title="로그아웃" color="red" onPress={handleLogout} />
+              <Button
+                title="카카오 로그아웃"
+                color="red"
+                onPress={handleLogout}
+              />
             </View>
           ) : (
             <Button
