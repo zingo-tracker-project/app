@@ -9,6 +9,8 @@ import axios from 'axios';
  */
 const makeApiRequest = async (url:string, method = 'get', params = {}, headers = {}) => {
 
+    // API 도메인
+    const DOMAIN = process.env.EXPO_PUBLIC_API_URL || ''
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -18,7 +20,7 @@ const makeApiRequest = async (url:string, method = 'get', params = {}, headers =
 
     try {
       const response = await axios({
-        url,         
+        url : url.includes('http') ? url : DOMAIN + url,
         method,
         headers: finalHeaders,
         params,

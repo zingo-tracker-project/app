@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { View, Text, TouchableOpacity, FlatList, TextInput, Modal, StyleSheet, ScrollView } from "react-native";
-
+import makeApiRequest from '@/hooks/api'
+import {useRecoilState} from "recoil";
+import {testAtom} from "@/recoil/bigTodosAtom";
 const Todo = () => {
     // 로그인 시 유저 이름
-    const [username, setUsername] = useState("윤지훈");
+    // const [username, setUsername] = useState("윤지훈");
+    const username = useRecoilState(testAtom)
     // 오늘 할일 컨셉
     const [concept, setTabs] = useState([
         { id: 1, name: "평일컨셉", bigTodos: ["알람 울리자마자 기상", "지각 안하기", "간식 참기", "12시 전에 폰끄고 취침"] },
@@ -53,6 +56,15 @@ const Todo = () => {
         newTodosList[index] = ""
         setNewBigTodos(newTodosList);
     }
+
+    useEffect(()=>{
+        console.log(process)
+        console.log(process.env.EXPO_PUBLIC_API_URL)
+        const API = process.env.EXPO_PUBLIC_API_URL
+        // console.log(API_URL)
+        let res = makeApiRequest(API+'/everything?q=tesla&from=2023-12-11&sortBy=publishedAt&apiKey=a59be9aa893d41d6844304d4c23162ef')
+        console.log(res)
+    }, [])
 
     return (
         <View style={styles.container}>
