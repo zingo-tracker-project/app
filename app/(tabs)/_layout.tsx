@@ -40,6 +40,11 @@ export default function TabLayout() {
       title: "calendar",
       icon: "list-outline",
     },
+        {
+            name: "recoilTest",
+            title: "recoil",
+            icon: "list-outline",
+        },
     {
       name: "settings",
       title: "설정",
