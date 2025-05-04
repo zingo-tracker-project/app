@@ -22,7 +22,7 @@ export default function TabLayout() {
   const tabList: BottomTab[] = [
     {
       name: "index",
-      title: "Home",
+      title: "home",
       icon: "home",
     },
     {

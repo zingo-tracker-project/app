@@ -1,15 +1,18 @@
 import { useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebViewNavigation } from 'react-native-webview';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import createUser from './users/usersApi';
+import { router } from 'expo-router';
+import { useSetRecoilState, useResetRecoilState } from 'recoil';
+import { userAtom } from '../recoil/userAtom';
 
 const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
 
-export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () => void) => {
+export const useKakaoLogin = () => {
   const webViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [showWebView, setShowWebView] = useState(false);
+  const setUser = useSetRecoilState(userAtom);
+  const resetUser = useResetRecoilState(userAtom);
 
   const handleNavigationStateChange = async (navState: WebViewNavigation) => {
     const { url } = navState;
@@ -19,7 +22,7 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
         const code = new URL(url).searchParams.get('code');
         if (!code) return;
 
-        setShowWebView(false); // 웹뷰 닫기
+        setShowWebView(false);
 
         const storedCode = await AsyncStorage.getItem('last_kakao_code');
         if (storedCode === code) return;
@@ -33,14 +36,14 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
         });
 
         const tokenData = await tokenResponse.json();
-        
+
         if (tokenData.access_token) {
           await AsyncStorage.setItem('kakao_token', tokenData.access_token);
           await AsyncStorage.setItem('kakao_refresh_token', tokenData.refresh_token);
 
-          const userData = await getUserInfo(tokenData.access_token);
+          const userData = await setUserInfo(tokenData.access_token);
           if (userData) {
-            onSuccess(userData); // 사용자 정보 저장 및 리다이렉트
+            router.replace('../components/newUserNickName');
           }
 
           await AsyncStorage.removeItem('last_kakao_code');
@@ -52,21 +55,30 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
     }
   };
 
-  const getUserInfo = async (accessToken: string) => {
+  const setUserInfo = async (accessToken: string) => {
     try {
-      const userInfoResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+      const response = await fetch('https://kapi.kakao.com/v2/user/me', {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      const userData = await userInfoResponse.json();
-      await AsyncStorage.setItem('kakao_user', JSON.stringify(userData));
-      
+      const userData = await response.json();
+      // await AsyncStorage.setItem('kakao_user', JSON.stringify(userData));
+
+      setUser({
+        nickname: userData.kakao_account.profile.nickname,
+        profileImage: userData.kakao_account.profile.profile_image_url,
+        id: userData.id,
+        isNew: true
+      });
+
       return {
         nickname: userData.kakao_account.profile.nickname,
         profileImage: userData.kakao_account.profile.profile_image_url,
         id: userData.id,
+        isNew: true
       };
+
     } catch (error) {
       console.error('getUserInfo :', error);
       return null;
@@ -77,18 +89,9 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
     try {
       const response = await fetch('https://kapi.kakao.com/v1/user/access_token_info', {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
-      console.log("checkAccessTokenValidity response : ", response)
-      if (response.status === 200) {
-        console.log('token is valid.');
-        return true;
-      } else {
-        console.log('token is not valid.');
-        return false;
-      }
+      return response.status === 200;
     } catch (error) {
       console.error('token check err :', error);
       return false;
@@ -102,9 +105,7 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
 
       const response = await fetch('https://kauth.kakao.com/oauth/token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `grant_type=refresh_token&client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&refresh_token=${refreshToken}`,
       });
 
@@ -112,12 +113,9 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
 
       if (tokenData.access_token) {
         await AsyncStorage.setItem('kakao_token', tokenData.access_token);
-
         if (tokenData.refresh_token) {
           await AsyncStorage.setItem('kakao_refresh_token', tokenData.refresh_token);
         }
-
-        console.log('token refreshed');
         return tokenData.access_token;
       } else {
         throw new Error('token refresh fail');
@@ -135,46 +133,24 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
 
       const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
-      
+
       if (response.status !== 200) throw new Error('카카오 로그아웃 실패');
 
       await AsyncStorage.removeItem('kakao_token');
       await AsyncStorage.removeItem('kakao_refresh_token');
-      await AsyncStorage.removeItem('kakao_user');
+      // await AsyncStorage.removeItem('kakao_user');
 
-      onLogout();
+      resetUser();
       setShowWebView(false);
+
     } catch (error) {
-      console.log('kakao logout err :', error);
+      console.error('kakao logout err :', error);
       alert(error.message);
     }
   };
 
-  // TODO 카카오 완전 로그아웃 웹뷰 구현
-  const handleKakaoLogout = async () => {
-    try {
-  
-      const logoutUrl = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}`;
-      console.info(logoutUrl);
-      
-      const response = await fetch(logoutUrl, {
-        method: 'GET',
-      });
-  
-      if (response.ok) {
-        console.log('카카오 로그아웃 요청 성공!');
-      } else {
-        console.error('카카오 로그아웃 요청 실패: ', response);
-      }
-    } catch (error) {
-      console.error('로그아웃 중 오류 발생:', error);
-    }
-  };
-  
   return {
     webViewRef,
     loading,
@@ -184,7 +160,6 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
     handleNavigationStateChange,
     KAKAO_AUTH_URL,
     handleLogout,
-    handleKakaoLogout,
     handleTokenRefresh,
     checkAccessTokenValidity,
   };
