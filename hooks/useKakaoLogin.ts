@@ -1,17 +1,28 @@
 import { useState, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebViewNavigation } from 'react-native-webview';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import createUser from './users/usersApi';
+import { router } from 'expo-router';
+import { useSetRecoilState, useResetRecoilState, useRecoilState, useRecoilValue, constSelector } from 'recoil';
+import { userAtom } from '../recoil/userAtom';
+import makeApiRequest from './api';
+import { ssoAtom } from '../recoil/ssoAtom';
+import { kakaoTokenAtom } from '../recoil/kakaoTokenAtom';
+import * as queryString from 'query-string';
 
 const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
 
-export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () => void) => {
-  const webViewRef = useRef(null);
-  const [loading, setLoading] = useState(false);
-  const [showWebView, setShowWebView] = useState(false);
 
-  const handleNavigationStateChange = async (navState: WebViewNavigation) => {
+export const useKakaoLogin = () => {
+  
+  const webViewRef = useRef(null);
+  const lastCode = useRef<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [ssoState, setSsoState] = useRecoilState(ssoAtom);
+  const setUser = useSetRecoilState(userAtom);
+  const resetUser = useResetRecoilState(userAtom);
+  const [kakaoToken, setKakaoToken] = useRecoilState(kakaoTokenAtom);
+
+  // handleNavigationStateChange
+  const kakaoLogin = async (navState: WebViewNavigation) => {
     const { url } = navState;
 
     if (url.includes('code=')) {
@@ -19,12 +30,10 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
         const code = new URL(url).searchParams.get('code');
         if (!code) return;
 
-        setShowWebView(false); // 웹뷰 닫기
+        setSsoState({ showWebView: false });
 
-        const storedCode = await AsyncStorage.getItem('last_kakao_code');
-        if (storedCode === code) return;
-
-        await AsyncStorage.setItem('last_kakao_code', code);
+        if (lastCode.current === code) return;
+        lastCode.current = code;
 
         const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
           method: 'POST',
@@ -33,91 +42,111 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
         });
 
         const tokenData = await tokenResponse.json();
-        
-        if (tokenData.access_token) {
-          await AsyncStorage.setItem('kakao_token', tokenData.access_token);
-          await AsyncStorage.setItem('kakao_refresh_token', tokenData.refresh_token);
 
-          const userData = await getUserInfo(tokenData.access_token);
+        if (tokenData.access_token) {
+          setKakaoToken({
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+          });
+
+          const userData = await setKakaoUserInfo(tokenData.access_token);
           if (userData) {
-            onSuccess(userData); // 사용자 정보 저장 및 리다이렉트
+            router.replace('../components/newUserNickName');
           }
 
-          await AsyncStorage.removeItem('last_kakao_code');
+          lastCode.current = null;
         }
       } catch (error) {
-        console.error('handleNavigationStateChange(login): ', error);
+        console.error('kakaoLogin: ', error);
         alert('로그인에 실패했습니다. 다시 시도해주세요.');
       }
     }
   };
 
-  const getUserInfo = async (accessToken: string) => {
+  /**
+   * 카카오 토큰으로 카카오 유저 정보 조회
+   * @param accessToken
+   * @returns recoil userAtom 업데이트
+   */
+  const setKakaoUserInfo = async (accessToken: string) => {
     try {
-      const userInfoResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+      const response = await fetch('https://kapi.kakao.com/v2/user/me', {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      const userData = await userInfoResponse.json();
-      await AsyncStorage.setItem('kakao_user', JSON.stringify(userData));
-      
-      return {
-        nickname: userData.kakao_account.profile.nickname,
+      const userData = await response.json();
+
+      // 로그인 후 유저 정보 업데이트
+      const loginResponse = await makeApiRequest('/user/login', 'POST', '', {
+        userId: userData.id,
+        userNm: userData.kakao_account.profile.nickname,
         profileImage: userData.kakao_account.profile.profile_image_url,
-        id: userData.id,
-      };
+      });
+
+      console.log("loginResponse");
+      console.log(loginResponse);
+
+      setUser({
+        userNm: loginResponse.data.userNm,
+        profileImage: loginResponse.data.profileImage,
+        userId: loginResponse.data.userId,
+        gender: loginResponse.data.gender,
+        isActive: loginResponse.data.isActive,
+        ageGrp: loginResponse.data.ageGrp,
+        createdAt: loginResponse.data.createdAt,
+        deletedAt: loginResponse.data.deletedAt,
+        accessToken: loginResponse.data.jwt.accessToken,
+        refreshToken: loginResponse.data.jwtrefreshToken,
+      });
+
+      router.replace('../(tabs)/login/newUserNickName');
+
     } catch (error) {
-      console.error('getUserInfo :', error);
+      console.error('setKakaoUserInfo :', error);
       return null;
     }
   };
 
-  const checkAccessTokenValidity = async (accessToken: string) => {
+  /**
+   * 카카오 토큰 유효성 검사
+   * @param accessToken
+   * @returns 
+   */
+  const checkKakaoTokenValidity = async (accessToken: string) => {
     try {
       const response = await fetch('https://kapi.kakao.com/v1/user/access_token_info', {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
-      console.log("checkAccessTokenValidity response : ", response)
-      if (response.status === 200) {
-        console.log('token is valid.');
-        return true;
-      } else {
-        console.log('token is not valid.');
-        return false;
-      }
+      return response.status === 200;
     } catch (error) {
       console.error('token check err :', error);
       return false;
     }
   };
 
-  const handleTokenRefresh = async () => {
+  /**
+   * 카카오 토큰 갱신
+   * @returns 
+   */
+  const kakaoTokenRefresh = async () => {
     try {
-      const refreshToken = await AsyncStorage.getItem('kakao_refresh_token');
-      if (!refreshToken) throw new Error('No refresh token found');
+      if (!kakaoToken.refreshToken) throw new Error('No refresh token found');
 
       const response = await fetch('https://kauth.kakao.com/oauth/token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `grant_type=refresh_token&client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&refresh_token=${refreshToken}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=refresh_token&client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&refresh_token=${kakaoToken.refreshToken}`,
       });
 
       const tokenData = await response.json();
 
       if (tokenData.access_token) {
-        await AsyncStorage.setItem('kakao_token', tokenData.access_token);
-
-        if (tokenData.refresh_token) {
-          await AsyncStorage.setItem('kakao_refresh_token', tokenData.refresh_token);
-        }
-
-        console.log('token refreshed');
+        setKakaoToken({
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || kakaoToken.refreshToken, // New refresh token might not be provided
+        });
         return tokenData.access_token;
       } else {
         throw new Error('token refresh fail');
@@ -128,64 +157,41 @@ export const useKakaoLogin = (onSuccess: (userData: any) => void, onLogout: () =
     }
   };
 
-  const handleLogout = async () => {
+  /**
+   * 카카오 로그아웃
+   * @returns 
+   */
+  const kakaoLogout = async () => {
     try {
-      const accessToken = await AsyncStorage.getItem('kakao_token');
-      if (!accessToken) throw new Error('No access token found');
+      if (!kakaoToken.accessToken) throw new Error('No access token found');
 
       const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${kakaoToken.accessToken}` },
       });
-      
+
       if (response.status !== 200) throw new Error('카카오 로그아웃 실패');
 
-      await AsyncStorage.removeItem('kakao_token');
-      await AsyncStorage.removeItem('kakao_refresh_token');
-      await AsyncStorage.removeItem('kakao_user');
+      setKakaoToken({ accessToken: null, refreshToken: null });
+      resetUser();
+      setSsoState({ showWebView: false });
 
-      onLogout();
-      setShowWebView(false);
-    } catch (error) {
-      console.log('kakao logout err :', error);
+    } catch (error: any) {
+      console.error('kakao logout err :', error);
       alert(error.message);
     }
   };
 
-  // TODO 카카오 완전 로그아웃 웹뷰 구현
-  const handleKakaoLogout = async () => {
-    try {
-  
-      const logoutUrl = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}`;
-      console.info(logoutUrl);
-      
-      const response = await fetch(logoutUrl, {
-        method: 'GET',
-      });
-  
-      if (response.ok) {
-        console.log('카카오 로그아웃 요청 성공!');
-      } else {
-        console.error('카카오 로그아웃 요청 실패: ', response);
-      }
-    } catch (error) {
-      console.error('로그아웃 중 오류 발생:', error);
-    }
-  };
-  
   return {
     webViewRef,
     loading,
     setLoading,
-    showWebView,
-    setShowWebView,
-    handleNavigationStateChange,
+    showWebView: ssoState.showWebView,
+    setShowWebView: (show: boolean) => setSsoState({ showWebView: show }),
+    kakaoLogin,
     KAKAO_AUTH_URL,
-    handleLogout,
-    handleKakaoLogout,
-    handleTokenRefresh,
-    checkAccessTokenValidity,
+    kakaoLogout,
+    kakaoTokenRefresh,
+    checkKakaoTokenValidity,
   };
 };
