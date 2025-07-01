@@ -6,6 +6,7 @@ import { userAtom } from "@/recoil/userAtom";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import makeApiRequest from "@/hooks/api";
 import { Picker } from '@react-native-picker/picker';
+import UserHeader from "@/components/UserHeader";
 
 export default function NewUserFlow() {
   const router = useRouter();

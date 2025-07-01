@@ -10,6 +10,7 @@ import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import UserHeader from "@/components/UserHeader";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -69,16 +70,19 @@ export default function TabLayout() {
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           headerShown: true,
           headerRight: () => (
-            <Pressable onPress={() => setShowWebView(true)}>
-              {({ pressed }) => (
-                <Ionicons
-                  name="person-circle-outline"
-                  size={25}
-                  color={Colors[colorScheme ?? "light"].text}
-                  style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                />
-              )}
-            </Pressable>
+            <>
+              <UserHeader />
+              <Pressable onPress={() => setShowWebView(true)}>
+                {({ pressed }) => (
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={25}
+                    color={Colors[colorScheme ?? "light"].text}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </>
           ),
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,

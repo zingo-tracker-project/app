@@ -84,9 +84,6 @@ export const useKakaoLogin = () => {
         profileImage: userData.kakao_account.profile.profile_image_url,
       });
 
-      console.log("loginResponse");
-      console.log(loginResponse);
-
       setUser({
         userNm: loginResponse.data.userNm,
         profileImage: loginResponse.data.profileImage,
