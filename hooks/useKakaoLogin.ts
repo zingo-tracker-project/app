@@ -1,25 +1,22 @@
+// @ts-nocheck
 import { useState, useRef } from 'react';
 import { WebViewNavigation } from 'react-native-webview';
 import { router } from 'expo-router';
-import { useSetRecoilState, useResetRecoilState, useRecoilState, useRecoilValue, constSelector } from 'recoil';
-import { userAtom } from '../recoil/userAtom';
+import { useUserStore, useSsoStore, useKakaoTokenStore } from 'store/zustandStore';
 import makeApiRequest from './api';
-import { ssoAtom } from '../recoil/ssoAtom';
-import { kakaoTokenAtom } from '../recoil/kakaoTokenAtom';
 import * as queryString from 'query-string';
 
 const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY}&redirect_uri=${process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
 
-
 export const useKakaoLogin = () => {
-  
   const webViewRef = useRef(null);
   const lastCode = useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [ssoState, setSsoState] = useRecoilState(ssoAtom);
-  const setUser = useSetRecoilState(userAtom);
-  const resetUser = useResetRecoilState(userAtom);
-  const [kakaoToken, setKakaoToken] = useRecoilState(kakaoTokenAtom);
+  const { showWebView, setShowWebView } = useSsoStore();
+  const setUser = useUserStore((state: any) => state.setUser);
+  const resetUser = useUserStore((state: any) => state.resetUser);
+  const kakaoToken = useKakaoTokenStore((state: any) => state.kakaoToken);
+  const setKakaoToken = useKakaoTokenStore((state: any) => state.setKakaoToken);
 
   // handleNavigationStateChange
   const kakaoLogin = async (navState: WebViewNavigation) => {
@@ -30,7 +27,7 @@ export const useKakaoLogin = () => {
         const code = new URL(url).searchParams.get('code');
         if (!code) return;
 
-        setSsoState({ showWebView: false });
+        setShowWebView(false);
 
         if (lastCode.current === code) return;
         lastCode.current = code;
@@ -76,6 +73,7 @@ export const useKakaoLogin = () => {
       });
 
       const userData = await response.json();
+      console.log("카카오 유저 정보:", userData);
 
       // 로그인 후 유저 정보 업데이트
       const loginResponse = await makeApiRequest('/user/login', 'POST', '', {
@@ -84,18 +82,24 @@ export const useKakaoLogin = () => {
         profileImage: userData.kakao_account.profile.profile_image_url,
       });
 
-      setUser({
-        userNm: loginResponse.data.userNm,
-        profileImage: loginResponse.data.profileImage,
-        userId: loginResponse.data.userId,
-        gender: loginResponse.data.gender,
-        isActive: loginResponse.data.isActive,
-        ageGrp: loginResponse.data.ageGrp,
-        createdAt: loginResponse.data.createdAt,
-        deletedAt: loginResponse.data.deletedAt,
-        accessToken: loginResponse.data.jwt.accessToken,
-        refreshToken: loginResponse.data.jwtrefreshToken,
-      });
+      console.log("서버 로그인 응답:", loginResponse);
+
+      // 서버 응답 구조 확인 및 안전한 처리
+      const userInfo = {
+        userNm: loginResponse?.data?.userNm || userData.kakao_account.profile.nickname,
+        profileImage: loginResponse?.data?.profileImage || userData.kakao_account.profile.profile_image_url,
+        userId: loginResponse?.data?.userId || userData.id,
+        gender: loginResponse?.data?.gender || null,
+        isActive: loginResponse?.data?.isActive || true,
+        ageGrp: loginResponse?.data?.ageGrp || null,
+        createdAt: loginResponse?.data?.createdAt || new Date().toISOString(),
+        deletedAt: loginResponse?.data?.deletedAt || null,
+        accessToken: loginResponse?.data?.jwt?.accessToken || accessToken,
+        refreshToken: loginResponse?.data?.jwt?.refreshToken || null,
+      };
+
+      console.log("저장할 사용자 정보:", userInfo);
+      setUser(userInfo);
 
       router.replace('../(tabs)/login/newUserNickName');
 
@@ -142,7 +146,7 @@ export const useKakaoLogin = () => {
       if (tokenData.access_token) {
         setKakaoToken({
           accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token || kakaoToken.refreshToken, // New refresh token might not be provided
+          refreshToken: tokenData.refresh_token || kakaoToken.refreshToken,
         });
         return tokenData.access_token;
       } else {
@@ -160,18 +164,18 @@ export const useKakaoLogin = () => {
    */
   const kakaoLogout = async () => {
     try {
-      if (!kakaoToken.accessToken) throw new Error('No access token found');
+      if (kakaoToken.accessToken) {
+        const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${kakaoToken.accessToken}` },
+        });
+      }
 
-      const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${kakaoToken.accessToken}` },
-      });
-
-      if (response.status !== 200) throw new Error('카카오 로그아웃 실패');
+      // if (response.status !== 200) throw new Error('카카오 로그아웃 실패');
 
       setKakaoToken({ accessToken: null, refreshToken: null });
       resetUser();
-      setSsoState({ showWebView: false });
+      setShowWebView(false);
 
     } catch (error: any) {
       console.error('kakao logout err :', error);
@@ -183,8 +187,8 @@ export const useKakaoLogin = () => {
     webViewRef,
     loading,
     setLoading,
-    showWebView: ssoState.showWebView,
-    setShowWebView: (show: boolean) => setSsoState({ showWebView: show }),
+    showWebView,
+    setShowWebView,
     kakaoLogin,
     KAKAO_AUTH_URL,
     kakaoLogout,

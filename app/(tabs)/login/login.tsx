@@ -2,13 +2,13 @@ import React from "react";
 import { View, Text, Button, StyleSheet, ActivityIndicator } from "react-native";
 import { WebView } from "react-native-webview";
 import { useKakaoLogin } from "../../../hooks/useKakaoLogin";
-import { useRecoilValue } from "recoil";
-import { userAtom } from "@/recoil/userAtom";
-import { TouchableOpacity } from "react-native";
+import { useUserStore } from '../../store/zustandStore';
 
 
 export default function Login() {
-  const user = useRecoilValue(userAtom);
+  const user = useUserStore((state: any) => state.user);
+
+  console.log("afsadfkjahsdjlkfhadsl ", user);
 
   const {
     webViewRef,
@@ -18,14 +18,17 @@ export default function Login() {
     setShowWebView,
     kakaoLogin,
     KAKAO_AUTH_URL,
+    kakaoLogout,
   } = useKakaoLogin();
 
   return (
     <View style={styles.container}>
       {user ? (
-        <Text style={styles.welcomeText}>{user.userNm}님 환영합니다! 🎉</Text>
+        <Text style={styles.welcomeText}>{user.userNm}님</Text>
       ) : !showWebView ? (
-        <Button title="로그인" color="black" onPress={() => setShowWebView(true)} />
+        
+        <Button title="로그인" color="white" onPress={() => setShowWebView(true)} />
+        
       ) : (
         <View style={styles.webViewContainer}>
           {loading && <ActivityIndicator size="large" color="#FEE500" style={styles.loadingIndicator} />}
@@ -34,9 +37,11 @@ export default function Login() {
             source={{ uri: KAKAO_AUTH_URL }}
             onLoad={() => setLoading(false)}
             onNavigationStateChange={kakaoLogin}
+
           />
         </View>
       )}
+      <Button title="로그아웃" onPress={kakaoLogout}></Button> 
     </View>
   );
 }
@@ -57,7 +62,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: "#white"
   },
 
   largeButton: {

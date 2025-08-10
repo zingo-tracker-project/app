@@ -61,7 +61,6 @@ export default function TabLayout() {
       icon: "list-outline",
     },
   ];
-  // console.log(tabList)
 
   return (
     <>
@@ -70,19 +69,7 @@ export default function TabLayout() {
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           headerShown: true,
           headerRight: () => (
-            <>
-              <UserHeader />
-              <Pressable onPress={() => setShowWebView(true)}>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </>
+            <UserHeader />
           ),
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
@@ -96,7 +83,6 @@ export default function TabLayout() {
             options={{
               title: tab.title,
               tabBarIcon: ({ color }) => (
-                // <IconSymbol size={28} name={tab.icon} color={color} />
                 <Ionicons name={tab.icon} size={28} color={color} />
               ),
               ...(tab.badge !== undefined && { tabBarBadge: tab.badge }),

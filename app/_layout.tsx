@@ -7,9 +7,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import {RecoilRoot} from "recoil";
+// import {RecoilRoot} from "recoil";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -29,16 +28,14 @@ export default function RootLayout() {
   }
 
   return (
-    <RecoilRoot>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          {/* 라우팅 될 페이지 */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          {/* url 잘못 접근 시 */}
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </RecoilRoot>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        {/* 라우팅 될 페이지 */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* url 잘못 접근 시 */}
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="auto" />
+    </ThemeProvider>
   );
 }

@@ -1,17 +1,15 @@
 import React, { useState } from "react";
 import { View, Text, Image, Button, StyleSheet, Pressable, TextInput } from "react-native";
 import { useRouter } from "expo-router";
-import { useRecoilValue, useSetRecoilState } from "recoil";
-import { userAtom } from "@/recoil/userAtom";
+import { useUserStore } from '../../store/zustandStore';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import makeApiRequest from "@/hooks/api";
 import { Picker } from '@react-native-picker/picker';
-import UserHeader from "@/components/UserHeader";
 
 export default function NewUserFlow() {
   const router = useRouter();
-  const user = useRecoilValue(userAtom);
-  const setUser = useSetRecoilState(userAtom);
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
 
   // 단계 관리
   const [step, setStep] = useState<"nickname" | "gender" | "ageGrp">("nickname");
@@ -19,6 +17,9 @@ export default function NewUserFlow() {
   const [nickname, setNickname] = useState(user?.userNm ?? "");
   const [gender, setGender] = useState<"M" | "F" | "">("");
   const [ageGrp, setAgeGrp] = useState("");
+
+  console.log("newUserNickName - 사용자 정보:", user);
+  console.log("newUserNickName - 사용자 이름:", user?.userNm);
 
   // 나이대 옵션 생성 (라벨과 값 분리)
   const ageOptions: { label: string; value: string }[] = [];
@@ -63,8 +64,9 @@ export default function NewUserFlow() {
         ageGrp,
       });
       if (res && res.status === 200 && res.data) {
-        setUser(prev => ({
-          ...prev,
+
+        setUser({
+          ...user,
           userNm: res.data.userNm,
           profileImage: res.data.profileImage,
           userId: res.data.userId,
@@ -73,7 +75,7 @@ export default function NewUserFlow() {
           ageGrp: res.data.ageGrp,
           createdAt: res.data.createdAt,
           deletedAt: res.data.deletedAt,
-        }));
+        });
         router.replace('./welcome');
       }
     }

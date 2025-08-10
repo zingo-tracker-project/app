@@ -1,14 +1,16 @@
 import React from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { useRecoilValue } from "recoil";
-import { userAtom } from "@/recoil/userAtom";
+import { useUserStore } from '../../store/zustandStore';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const user = useRecoilValue(userAtom);
+  const user = useUserStore((state) => state.user);
 
-  if (!user) {
+  console.log("welcome - 사용자 정보:", user);
+  console.log("welcome - 사용자 이름:", user?.userNm);
+
+  if (!user || !user.userNm) {
     return (
       <View style={styles.container}>
         <Text>유저 정보 없음</Text>
